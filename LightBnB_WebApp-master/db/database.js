@@ -31,9 +31,10 @@ const pool = new Pool({
 const getUserWithEmail = function (email) {
  return pool
  .query(`SELECT * FROM users WHERE email = $1`, [email.toLowerCase()])
- .then (result => result.rows[0])
+ .then ((result) => {
+  return result.rows[0]})
  .catch(error => {
-  console.log(error.message);
+  console.log(error.message)
  })
 };
 
@@ -49,9 +50,10 @@ const getUserWithEmail = function (email) {
 const getUserWithId = function(id) {
   return pool
   .query(`SELECT * FROM users WHERE id = $1`, [id])
-  .then (results=> results.rows[0])
+  .then ((result) => {
+    return result.rows[0]})
   .catch (error => {
-    console.log(error.message);
+    console.log(error.message)
   })
 }
 
@@ -72,9 +74,10 @@ const addUser = function (user) {
   INSERT INTO users (name, email, password)
   VALUES ($1, $2, $3)
   RETURNING *`, [user.name, user.email, user.password])
-  .then(result => result.rows[0])
+  .then((result) => {
+    return result.rows[0]})
   .catch (error => {
-    console.log(error.message);
+    console.log(error.message)
   })
 };
 
@@ -99,9 +102,8 @@ const getAllReservations = function (guest_id, limit = 10) {
   ORDER BY start_date
   LIMIT $2;
   `, [guest_id, limit])
-  .then (result => {
-    console.log(result.rows);
-    return result.rows;
+  .then ((result) => {
+    return result.rows
   })
   .catch (error => {
     console.log(error.message)
@@ -134,7 +136,11 @@ const getAllReservations = function (guest_id, limit = 10) {
  * 5. Console log everything just to make sure we've done it right.
  * 6. Run the query.
  */
-
+/**
+ * Remember that all of these may be passed in at the same time so they all need to work together. 
+ * You will need to use AND for every filter after the first one. 
+ * Also, none of these might be passed in, so the query still needs to work without a WHERE clause.
+ */
 const getAllProperties = (options, limit = 10) => {
   //1
   const queryParams = [];
@@ -152,6 +158,30 @@ const getAllProperties = (options, limit = 10) => {
     queryString += `WHERE city LIKE $${queryParams.length}`;
   }
 
+  //7
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100);
+    queryString += `AND properties.cost_per_night >= $${queryParams.length}`
+  }
+
+  //8
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night * 100);
+    queryString += `AND properties.cost_per_night <= $${queryParams.length}`
+  }
+
+  //9
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `AND property_reviews.rating >= $${queryParams.length}`
+  }
+
+  //10
+   if (options.owner_id) {
+    queryParams.push(`${options.owner_id}`);
+    queryString += `AND properties.owner_id = $${queryParams.length}`
+  }
+
   //4
   queryParams.push(limit);
   queryString += `GROUP BY properties.id
@@ -162,12 +192,11 @@ const getAllProperties = (options, limit = 10) => {
   console.log(queryString, queryParams);
 
   //6
-  return pool.query(quertString, queryParams)
-  .then (result => result.rows)
+  return pool.query(queryString, queryParams)
+  .then ((result) => {
+    return result.rows})
   // .catch (error => console.log(error.message))
 };
-
-// HAVING avg(property_reviews.rating) >= 4
 
 /**
  * Add a property to the database
